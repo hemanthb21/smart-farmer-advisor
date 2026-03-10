@@ -1,0 +1,24 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Python server artifacts
+__pycache__/
+
+# Env files (API keys - never commit these!)
+.env
+.env.local
+.env.production
+
+# Temp / backup
+*.bak
+*.tmp
