@@ -2,14 +2,11 @@
 // SCREENS-SPLASH.JS – Splash + Real Firebase Phone OTP Login
 // ============================================================
 
-const LANGUAGES = [
-  { code:'te', label:'తెలుగు', sub:'Telugu'  },
-  { code:'hi', label:'हिन्दी',  sub:'Hindi'   },
-  { code:'en', label:'English', sub:'English' },
-  { code:'ta', label:'தமிழ்',   sub:'Tamil'   },
-  { code:'kn', label:'ಕನ್ನಡ',   sub:'Kannada' },
-  { code:'mr', label:'मराठी',   sub:'Marathi' },
-];
+// LANGUAGES array is defined in data.js — do NOT redeclare here
+// (data.js uses { code, label, name } — splash.js uses label + sub for display)
+// We'll use a local display map for the 'sub' labels:
+const LANG_SUBS = { te:'Telugu', hi:'Hindi', en:'English', ta:'Tamil', kn:'Kannada', mr:'Marathi' };
+
 
 function renderSplash() {
   const s = document.getElementById('screen-splash');
@@ -51,7 +48,7 @@ function renderSplash() {
           <button class="lang-btn ${STATE.lang===l.code?'selected':''}"
             onclick="STATE.lang='${l.code}';saveLang('${l.code}');renderSplash()">
             <span style="font-size:16px;font-weight:700;display:block">${l.label}</span>
-            <span style="font-size:10px;opacity:0.7">${l.sub}</span>
+            <span style="font-size:10px;opacity:0.7">${LANG_SUBS[l.code]||l.name||l.code}</span>
           </button>`).join('')}
       </div>
 

@@ -283,6 +283,9 @@ const STATE = {
   searchMandi: '',
   filterScheme: 'All',
   weatherTab: 'forecast',
+  newReminderType: 'sowing',
+  liveWeather: null,
+  pendingPhone: null,
 };
 
 function t(key) {

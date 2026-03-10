@@ -4,50 +4,16 @@
 
 const SCREENS = ['splash','onboarding','profile','home','crop','disease','weather','mandi','schemes','voice','reminders','soil','analytics','marketplace','experts','community'];
 
-function navigate(screenId, direction = 'forward') {
-  const current = document.getElementById('screen-' + STATE.currentScreen);
-  const next = document.getElementById('screen-' + screenId);
-  if (!next || screenId === STATE.currentScreen) return;
-
-  next.classList.remove('hidden', 'slide-left', 'slide-right');
-  next.style.zIndex = 10;
-  if (current) current.style.zIndex = 5;
-
-  // Trigger reflow
-  next.getBoundingClientRect();
-  if (direction === 'forward') {
-    next.classList.add('slide-right');
-    requestAnimationFrame(() => { requestAnimationFrame(() => { next.classList.remove('slide-right'); }); });
-  } else {
-    next.classList.add('slide-left');
-    requestAnimationFrame(() => { requestAnimationFrame(() => { next.classList.remove('slide-left'); }); });
-  }
-
-  setTimeout(() => {
-    if (current) { current.classList.add('hidden'); current.style.zIndex = ''; }
-    next.style.zIndex = '';
-  }, 400);
-
-  STATE.currentScreen = screenId;
-  updateBottomNav(screenId);
-  refreshScreen(screenId);
+// navigate() and refreshScreen() are defined in main.js (loaded last)
+// Stub so inline onclick handlers work even before main.js loads:
+function navigate(screenId, direction) {
+  // will be overridden by main.js
+  console.warn('navigate stub called — main.js not loaded yet?', screenId);
 }
-
 function refreshScreen(id) {
-  if (id === 'home') renderHome();
-  if (id === 'crop') renderCropStep();
-  if (id === 'mandi') renderMandi();
-  if (id === 'schemes') renderSchemes();
-  if (id === 'marketplace') renderMarketplace();
-  if (id === 'experts') renderExperts();
-  if (id === 'community') renderCommunity();
-  if (id === 'analytics') renderAnalytics();
-  if (id === 'soil') renderSoil();
-  if (id === 'reminders') renderReminders();
-  if (id === 'weather') renderWeather();
-  if (id === 'voice') renderVoice();
-  if (id === 'disease') resetDisease();
+  // will be overridden by main.js — this is just a safety stub
 }
+
 
 // ---- BOTTOM NAV ----
 const NAV_ITEMS = [
@@ -277,18 +243,21 @@ function profileNext() {
     STATE.profileStep++;
     renderProfileScreen();
   } else {
-    // Save profile
+    // Save profile to state and LocalStorage
+    const avatars = ['👨\u200d🌾','👩\u200d🌾','🧑\u200d🌾','👴','👵','🧑','👨','👩'];
     STATE.farmer = {
-      name: STATE.profileData.name || 'Farmer',
-      avatar: ['👨‍🌾','👩‍🌾','🧑‍🌾','👴','👵','🧑','👨','👩'][STATE.selectedAvatar],
-      state: STATE.profileData.state || 'Andhra Pradesh',
+      name:     STATE.profileData.name || 'Farmer',
+      avatar:   avatars[STATE.selectedAvatar] || '👨\u200d🌾',
+      state:    STATE.profileData.state || 'Andhra Pradesh',
       district: STATE.profileData.district || 'Guntur',
-      village: STATE.profileData.village,
-      acres: STATE.profileData.acres,
-      soilType: STATE.profileData.soilType,
-      water: STATE.profileData.waterSource,
-      crops: STATE.profileData.crops,
+      village:  STATE.profileData.village || '',
+      acres:    STATE.profileData.acres || 2,
+      soilType: STATE.profileData.soilType || 'black',
+      water:    STATE.profileData.waterSource || 'borewell',
+      crops:    STATE.profileData.crops || [],
     };
+    // Persist to localStorage
+    if (typeof saveFarmerData === 'function') saveFarmerData(STATE.farmer);
     showToast('✅ Profile saved! Welcome ' + STATE.farmer.name);
     navigate('home');
   }
