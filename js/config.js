@@ -1,24 +1,23 @@
 // ============================================================
 // CONFIG.JS — API Keys & Firebase Configuration
 // ============================================================
-// ⚠️  FILL IN YOUR OWN KEYS BEFORE USING THE APP
-// See SETUP.md for step-by-step instructions
+// Firebase keys are configured for: smart-farmer-advisor project
 // ============================================================
 
 const APP_CONFIG = {
 
   // ──────────────────────────────────────────────────
-  // FIREBASE (for real OTP SMS login)
-  // Get from: https://console.firebase.google.com
-  //   → Your Project → Settings (⚙️) → General → Your apps → Web app → firebaseConfig
+  // FIREBASE (Real OTP SMS via Firebase Phone Auth)
+  // Project: smart-farmer-advisor
+  // Console: https://console.firebase.google.com/project/smart-farmer-advisor
   // ──────────────────────────────────────────────────
   firebase: {
-    apiKey:            "PASTE_YOUR_FIREBASE_API_KEY_HERE",
-    authDomain:        "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
-    projectId:         "PASTE_YOUR_PROJECT_ID",
-    storageBucket:     "PASTE_YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
-    appId:             "PASTE_YOUR_APP_ID",
+    apiKey:            "AIzaSyDDISryZJLG_YuYWXiGFtdmFNKDW6_f0v0",
+    authDomain:        "smart-farmer-advisor.firebaseapp.com",
+    projectId:         "smart-farmer-advisor",
+    storageBucket:     "smart-farmer-advisor.firebasestorage.app",
+    messagingSenderId: "31534077436",
+    appId:             "1:31534077436:web:f167217b1d13d7aee24e79",
   },
 
   // ──────────────────────────────────────────────────
@@ -29,14 +28,14 @@ const APP_CONFIG = {
   openWeatherApiKey: "PASTE_YOUR_OPENWEATHER_API_KEY_HERE",
 
   // ──────────────────────────────────────────────────
-  // FEATURE FLAGS — set to true once you add real keys
+  // FEATURE FLAGS
   // ──────────────────────────────────────────────────
   features: {
-    realOTP:     false,  // ← set to true after adding Firebase keys
+    realOTP:     true,   // ✅ Firebase Phone Auth ENABLED — real SMS OTP
     realWeather: false,  // ← set to true after adding OpenWeather key
-    realVoice:   true,   // Web Speech API — no key needed, works now!
-    realCamera:  true,   // Browser Camera API — no key needed, works now!
-    realGPS:     true,   // Browser Geolocation — no key needed, works now!
+    realVoice:   true,   // Web Speech API — works in Chrome now!
+    realCamera:  true,   // Browser Camera API — works now!
+    realGPS:     true,   // Browser Geolocation — works now!
   },
 
   // Default fallback location (if GPS denied)
