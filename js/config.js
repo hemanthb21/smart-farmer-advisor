@@ -31,7 +31,7 @@ const APP_CONFIG = {
   // FEATURE FLAGS
   // ──────────────────────────────────────────────────
   features: {
-    realOTP:     true,   // ✅ Firebase Phone Auth ENABLED — real SMS OTP
+    realOTP:     false,  // ← set to true to enable real Firebase SMS OTP
     realWeather: false,  // ← set to true after adding OpenWeather key
     realVoice:   true,   // Web Speech API — works in Chrome now!
     realCamera:  true,   // Browser Camera API — works now!
