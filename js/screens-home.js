@@ -2,10 +2,25 @@
 // SCREENS-HOME.JS – Home Dashboard + Weather Screen
 // ============================================================
 
-function renderHome() {
+async function renderHome() {
   const s = document.getElementById('screen-home');
   if (!s) return;
+  // Load saved farmer profile
+  if (!STATE.farmer) { const saved = loadFarmerData(); if (saved) STATE.farmer = saved; }
   const f = STATE.farmer || { name: 'Farmer', avatar: '👨‍🌾', district: 'Guntur', state: 'Andhra Pradesh' };
+
+  // Get GPS location + real weather in background
+  let wx = null;
+  if (APP_CONFIG.features.realGPS || APP_CONFIG.features.realWeather) {
+    getUserLocation().then(async (loc) => {
+      if (loc.city) {
+        const cityEl = document.getElementById('home-city');
+        if (cityEl) cityEl.textContent = '📍 ' + loc.city + (loc.state ? ', ' + loc.state : '');
+      }
+      wx = await fetchRealWeather(loc.lat, loc.lon);
+      if (wx) updateHomeWeatherStrip(wx);
+    });
+  }
 
   const modules = [
     { id:'crop',      emoji:'🌱', label: t('cropAdvisor'),    color:'#2E7D32' },
@@ -33,7 +48,7 @@ function renderHome() {
           <div>
             <h1 class="font-display text-white" style="font-size:20px;font-weight:800;line-height:1.2">${greet(f.name)}</h1>
             <div class="flex items-center gap-2 mt-1">
-              <span style="font-size:12px;color:rgba(255,255,255,0.8)">📍 ${f.district}, ${f.state}</span>
+              <span id="home-city" style="font-size:12px;color:rgba(255,255,255,0.8)">📍 ${f.district||'India'}, ${f.state||''}</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -47,26 +62,26 @@ function renderHome() {
           </div>
         </div>
 
-        <!-- WEATHER STRIP -->
-        <div class="card" style="padding:14px 16px;border-radius:18px" onclick="navigate('weather')">
+        <!-- WEATHER STRIP (real data injected by updateHomeWeatherStrip) -->
+        <div id="home-weather-strip" class="card" style="padding:14px 16px;border-radius:18px;cursor:pointer" onclick="navigate('weather')">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-3">
-              <span style="font-size:36px">⛅</span>
+              <span id="home-wx-icon" style="font-size:36px">⛅</span>
               <div>
-                <div class="font-display font-bold" style="font-size:22px">32°C</div>
-                <div class="text-muted text-xs">Partly Cloudy • Guntur</div>
+                <div id="home-wx-temp" class="font-display font-bold" style="font-size:22px">32°C</div>
+                <div id="home-wx-desc" class="text-muted text-xs">Partly Cloudy • Guntur</div>
               </div>
             </div>
             <div style="text-align:right">
-              <div class="chip chip-sky text-xs">💧 68% Humidity</div>
-              <div class="text-xs text-muted mt-1">Wind: 12 km/h</div>
+              <div id="home-wx-hum" class="chip chip-sky text-xs">💧 68% Humidity</div>
+              <div id="home-wx-wind" class="text-xs text-muted mt-1">Wind: 12 km/h</div>
             </div>
           </div>
           <div style="background:rgba(2,136,209,0.08);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
             <span>🌧️</span>
-            <span class="text-sm font-semibold" style="color:var(--sky)">${t('aiAlert')}</span>
+            <span id="home-wx-alert" class="text-sm font-semibold" style="color:var(--sky)">${t('aiAlert')}</span>
           </div>
-          <div class="flex gap-2 mt-3">
+          <div id="home-wx-forecast" class="flex gap-2 mt-3">
             ${['Today','Wed','Thu'].map((d2,i) => `
               <div class="forecast-chip" style="flex:1;background:rgba(2,136,209,0.08);border-radius:10px;padding:6px;text-align:center">
                 <div class="text-xs text-muted">${d2}</div>
@@ -157,9 +172,39 @@ function renderHome() {
   `;
 }
 
+
+// Updates the home weather strip in-place with real data
+function updateHomeWeatherStrip(wx) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
+  set('home-wx-icon', `<span style="font-size:36px">${wx.icon}</span>`);
+  set('home-wx-temp', `${wx.temp}°C`);
+  set('home-wx-desc', `${wx.desc.charAt(0).toUpperCase()+wx.desc.slice(1)} • ${wx.city||''}`);
+  set('home-wx-hum',  `💧 ${wx.humidity}% Humidity`);
+  set('home-wx-wind', `Wind: ${wx.windSpeed} km/h`);
+  // Update city label
+  const cityEl = document.getElementById('home-city');
+  if (cityEl && wx.city) cityEl.textContent = '📍 ' + wx.city;
+  // Update AI farming alert
+  const alerts = generateFarmingAlerts(wx);
+  if (alerts[0]) set('home-wx-alert', alerts[0].msg);
+  // Update forecast
+  if (wx.forecast && wx.forecast.length) {
+    const fEl = document.getElementById('home-wx-forecast');
+    if (fEl) fEl.innerHTML = wx.forecast.slice(0,3).map(f => `
+      <div class="forecast-chip" style="flex:1;background:rgba(2,136,209,0.08);border-radius:10px;padding:6px;text-align:center">
+        <div class="text-xs text-muted">${f.day}</div>
+        <div style="font-size:18px">${f.icon}</div>
+        <div class="font-mono text-xs font-bold">${f.hi}°</div>
+      </div>`).join('');
+  }
+  // Cache for weather screen
+  STATE.liveWeather = wx;
+}
+
 // ============================================================
 // WEATHER SCREEN
 // ============================================================
+
 
 function renderWeather() {
   const s = document.getElementById('screen-weather');

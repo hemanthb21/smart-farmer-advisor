@@ -1,12 +1,11 @@
 // ============================================================
-// MAIN.JS – App Bootstrap: builds all screen HTML, mounts SPA
+// MAIN.JS – App Bootstrap with Auto-Login from LocalStorage
 // ============================================================
 
 function buildAppShell() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Generate all screen container divs
   const screenDefs = [
     { id: 'splash',       bg: 'linear-gradient(160deg,#1B5E20,#2E7D32 40%,#F9A825)' },
     { id: 'onboarding',   bg: 'var(--cream)' },
@@ -30,119 +29,33 @@ function buildAppShell() {
   app.innerHTML = screenDefs.map(sc => `
     <div id="screen-${sc.id}" class="screen ${sc.id !== 'splash' ? 'hidden' : ''}"
       style="background:${sc.bg}"></div>
-  `).join('') + `
-    <!-- BOTTOM NAV (global, outside screens) -->
-    <nav class="bottom-nav" id="bottom-nav"></nav>
-  `;
+  `).join('') + `<nav class="bottom-nav" id="bottom-nav"></nav>`;
 }
 
-function initApp() {
-  buildAppShell();
+const NAV_HIDDEN_SCREENS = ['splash', 'onboarding', 'profile', 'voice'];
 
-  // Render initial screens
-  renderSplash();
-  renderOnboarding();
-  renderProfileScreen();
+// ── CORE NAVIGATE (overrides the stub in core.js) ──
+function navigate(screenId, direction = 'forward') {
+  const navHidden = NAV_HIDDEN_SCREENS.includes(screenId);
 
-  // Render bottom nav
-  renderBottomNav();
-
-  // Override profile navigate to handle profile-view
-  const origNavigate = window.navigate;
-
-  // Patch profile nav item to show profile-view if farmer exists
-  document.getElementById('bottom-nav')?.addEventListener('click', (e) => {
-    // Already handled by onclick
-  });
-
-  // Once user lands on home, render all screens lazily
-  // They are rendered on navigate() via refreshScreen()
-
-  // Hide bottom nav on certain screens
-  const navHiddenScreens = ['splash','onboarding','profile','voice'];
-  const origRefresh = window.refreshScreen || function(){};
-
-  window.updateBottomNavVisibility = function(screenId) {
-    const nav = document.getElementById('bottom-nav');
-    if (!nav) return;
-    nav.style.display = navHiddenScreens.includes(screenId) ? 'none' : 'flex';
-  };
-
-  // Wrap navigate to also update nav visibility
-  const _navigate = navigate;
-  window.navigate = function(screenId, direction) {
-    // Special case: profile from bottom nav should show profile-view if farmer exists
-    if (screenId === 'profile' && STATE.farmer && STATE.currentScreen !== 'profile') {
-      const s = document.getElementById('screen-profile-view');
-      if (s) {
-        renderProfileView();
-        _navigate('profile-view', direction);
-        return;
-      }
-    }
-    _navigate(screenId, direction);
-    window.updateBottomNavVisibility(screenId);
-  };
-  window.updateBottomNavVisibility('splash');
-}
-
-// ---- HANDLE INITIAL LOAD ----
-document.addEventListener('DOMContentLoaded', () => {
-  initApp();
-
-  // Auto-advance splash after 2.8s (optional – user may interact)
-  // Uncomment below to auto-advance:
-  // setTimeout(() => { if (STATE.currentScreen === 'splash') navigate('onboarding'); }, 3500);
-});
-
-// Expose key functions globally for inline onclick handlers
-window.navigate = function(screenId, direction = 'forward') {
-  const navHiddenScreens = ['splash','onboarding','profile','voice'];
+  // Profile → show profile-view if farmer is set
   if (screenId === 'profile' && STATE.farmer && STATE.currentScreen !== 'profile') {
-    const s = document.getElementById('screen-profile-view');
-    if (s) {
-      renderProfileView();
-    }
-    // Use core navigate to profile-view
-    const current = document.getElementById('screen-' + STATE.currentScreen);
-    const next = document.getElementById('screen-profile-view');
-    if (!next) { return; }
-    next.classList.remove('hidden','slide-left','slide-right');
-    next.style.zIndex = 10;
-    if (current) current.style.zIndex = 5;
-    next.getBoundingClientRect();
-    if (direction === 'forward') {
-      next.classList.add('slide-right');
-      requestAnimationFrame(() => { requestAnimationFrame(() => { next.classList.remove('slide-right'); }); });
-    }
-    setTimeout(() => {
-      if (current) { current.classList.add('hidden'); current.style.zIndex = ''; }
-      next.style.zIndex = '';
-    }, 400);
-    STATE.currentScreen = 'profile-view';
-    updateBottomNav('profile');
-    const nav = document.getElementById('bottom-nav');
-    if (nav) nav.style.display = 'flex';
-    return;
+    screenId = 'profile-view';
   }
 
-  // Core navigate
   const current = document.getElementById('screen-' + STATE.currentScreen);
-  const next = document.getElementById('screen-' + screenId);
+  const next    = document.getElementById('screen-' + screenId);
   if (!next || screenId === STATE.currentScreen) return;
 
   next.classList.remove('hidden', 'slide-left', 'slide-right');
   next.style.zIndex = 10;
   if (current) current.style.zIndex = 5;
-  next.getBoundingClientRect();
+  next.getBoundingClientRect(); // force reflow
 
-  if (direction === 'forward') {
-    next.classList.add('slide-right');
-    requestAnimationFrame(() => { requestAnimationFrame(() => { next.classList.remove('slide-right'); }); });
-  } else {
-    next.classList.add('slide-left');
-    requestAnimationFrame(() => { requestAnimationFrame(() => { next.classList.remove('slide-left'); }); });
-  }
+  const animClass = direction === 'back' ? 'slide-left' : 'slide-right';
+  next.classList.add(animClass);
+  requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove(animClass)));
+
   setTimeout(() => {
     if (current) { current.classList.add('hidden'); current.style.zIndex = ''; }
     next.style.zIndex = '';
@@ -152,7 +65,77 @@ window.navigate = function(screenId, direction = 'forward') {
   updateBottomNav(screenId);
   refreshScreen(screenId);
 
-  // Nav visibility
   const nav = document.getElementById('bottom-nav');
-  if (nav) nav.style.display = navHiddenScreens.includes(screenId) ? 'none' : 'flex';
-};
+  if (nav) nav.style.display = navHidden ? 'none' : 'flex';
+}
+
+function refreshScreen(screenId) {
+  const fn = {
+    home:         renderHome,
+    crop:         () => renderCropStep(STATE.cropStep || 1),
+    disease:      renderDisease,
+    weather:      renderWeather,
+    mandi:        renderMandi,
+    schemes:      renderSchemes,
+    voice:        renderVoice,
+    reminders:    renderReminders,
+    soil:         renderSoil,
+    analytics:    renderAnalytics,
+    marketplace:  renderMarketplace,
+    experts:      renderExperts,
+    community:    renderCommunity,
+    'profile-view': renderProfileView,
+    profile:      renderProfileScreen,
+    onboarding:   renderOnboarding,
+    splash:       renderSplash,
+  }[screenId];
+  if (fn) fn();
+}
+
+// ── APP INIT ──
+async function initApp() {
+  buildAppShell();
+
+  // Load saved language
+  const savedLang = loadLang();
+  if (savedLang) STATE.lang = savedLang;
+
+  // Load saved farmer profile
+  const savedFarmer = loadFarmerData();
+  if (savedFarmer) STATE.farmer = savedFarmer;
+
+  // Load saved reminders
+  STATE.reminders = loadReminders();
+
+  // Load saved soil data
+  const savedSoil = loadSoilData();
+  if (savedSoil) Object.assign(STATE.soilData, savedSoil);
+
+  // Render bottom nav
+  renderBottomNav();
+  const nav = document.getElementById('bottom-nav');
+  if (nav) nav.style.display = 'none'; // hidden on splash
+
+  // Initialize Firebase (if configured)
+  if (isFirebaseConfigured()) initFirebase();
+
+  // Decide start screen
+  if (savedFarmer && savedFarmer.name && savedFarmer.name !== 'Guest') {
+    // Returning user — skip straight to home
+    STATE.currentScreen = 'home';
+    const splashEl = document.getElementById('screen-splash');
+    const homeEl   = document.getElementById('screen-home');
+    if (splashEl) splashEl.classList.add('hidden');
+    if (homeEl)   homeEl.classList.remove('hidden');
+    if (nav)      nav.style.display = 'flex';
+    updateBottomNav('home');
+    renderHome(); // async — will also fetch weather
+    showToast(`🌱 Welcome back, ${savedFarmer.name}!`);
+  } else {
+    // First time — show splash
+    renderSplash();
+    renderOnboarding();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
